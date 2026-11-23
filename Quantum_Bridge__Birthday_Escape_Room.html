@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-emerald-400 select-none">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PROJECT: HEARTBEAT // Quantum Terminal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"Share Tech Mono"', '"Fira Code"', 'monospace'],
+          },
+          colors: {
+            cyber: {
+              green: '#00ff66',
+              cyan: '#00f3ff',
+              pink: '#ff0055',
+              yellow: '#ffb700',
+              dark: '#0a0f12',
+              panel: '#111923',
+            }
+          },
+          animation: {
+            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'glitch': 'glitch 0.3s ease-in-out infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* CRT Scanline & Glow Effects */
+    body {
+      font-family: 'Share Tech Mono', monospace;
+      background-color: #05080a;
+      overflow-x: hidden;
+    }
+
+    .crt-overlay {
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.25) 50%
+      ), linear-gradient(
+        90deg,
+        rgba(255, 0, 0, 0.03),
+        rgba(0, 255, 0, 0.01),
+        rgba(0, 0, 255, 0.03)
+      );
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none;
+    }
+
+    .glow-text-green {
+      text-shadow: 0 0 8px rgba(0, 255, 102, 0.6), 0 0 20px rgba(0, 255, 102, 0.3);
+    }
+    .glow-text-cyan {
+      text-shadow: 0 0 8px rgba(0, 243, 255, 0.6), 0 0 20px rgba(0, 243, 255, 0.3);
+    }
+    .glow-text-pink {
+      text-shadow: 0 0 8px rgba(255, 0, 85, 0.6), 0 0 20px rgba(255, 0, 85, 0.3);
+    }
+
+    .glow-box-green {
+      box-shadow: 0 0 15px rgba(0, 255, 102, 0.2), inset 0 0 15px rgba(0, 255, 102, 0.1);
+      border: 1px solid rgba(0, 255, 102, 0.4);
+    }
+
+    .glow-box-cyan {
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.2), inset 0 0 15px rgba(0, 243, 255, 0.1);
+      border: 1px solid rgba(0, 243, 255, 0.4);
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0f12;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #00f3ff44;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00f3ffaa;
+    }
+
+    /* Retro Grid Background */
+    .bg-grid {
+      background-image: linear-gradient(to right, rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+  
+    @keyframes giftReveal { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    .gift-reveal { animation: giftReveal 0.9s ease-out both; }
+  </style>
+</head>
+<body class="h-full flex flex-col justify-between bg-grid text-emerald-400 relative">
+
+  <!-- CRT Overlay Layer -->
+  <div class="crt-overlay fixed inset-0 z-50 pointer-events-none"></div>
+
+  <!-- Header Bar -->
+  <header class="border-b border-cyan-900/50 bg-slate-950/80 backdrop-blur px-4 py-3 flex justify-between items-center z-40">
+    <div class="flex items-center space-x-3">
+      <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+      <span class="font-bold tracking-widest text-lg glow-text-cyan text-cyan-400">PROJECT: HEARTBEAT v2.6</span>
+      <span class="hidden md:inline-block text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">SECURE QUANTUM LINK</span>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex items-center space-x-2 md:space-x-4">
+      <button id="soundToggleBtn" onclick="toggleAudio()" class="p-2 rounded bg-slate-900 border border-cyan-800 text-cyan-400 hover:bg-cyan-950 transition text-xs flex items-center space-x-1">
+        <i data-lucide="volume-2" id="soundIcon" class="w-4 h-4"></i>
+        <span id="soundText" class="hidden sm:inline">AUDIO: ON</span>
+      </button>
+      <button onclick="openConfigModal()" class="p-2 rounded bg-slate-900 border border-emerald-800 text-emerald-400 hover:bg-emerald-950 transition text-xs flex items-center space-x-1">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">CONFIG</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Terminal Stage Container -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-6 flex flex-col justify-center items-center z-10 relative">
+
+    <!-- Screen Wrapper -->
+    <div class="w-full h-full max-h-[800px] flex flex-col bg-slate-950/90 rounded-lg glow-box-cyan overflow-hidden relative border border-cyan-900">
+      
+      <!-- Top Status Ribbon -->
+      <div class="bg-slate-900/90 border-b border-cyan-900/60 px-4 py-2 flex justify-between items-center text-xs font-mono">
+        <div id="statusIndicator" class="flex items-center space-x-2">
+          <span class="text-slate-400">STATUS:</span>
+          <span id="levelStatusText" class="text-yellow-400 font-bold tracking-wider">AWAITING AUTHORIZATION</span>
+        </div>
+        <div class="text-cyan-600 hidden sm:block">SYS.LOC // DISPERSAL PROTOCOL</div>
+      </div>
+
+      <!-- LEVEL 0: LOGIN BOOT SEQUENCE -->
+      <div id="level0" class="flex-1 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto font-mono">
+        <div id="bootLogs" class="space-y-1.5 text-xs sm:text-sm text-cyan-300">
+          <!-- Logs will be typed dynamically -->
+        </div>
+
+        <div id="loginPrompt" class="hidden mt-6 pt-4 border-t border-cyan-900/50 space-y-4">
+          <p class="text-emerald-400 text-sm sm:text-base glow-text-green font-semibold">
+            [SECURITY CHECK] Confirm Identity to access encrypted core files:
+          </p>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+            <span class="text-cyan-400 text-lg">&gt;</span>
+            <input type="text" id="passcodeInput" placeholder="Enter secret code..." class="flex-1 bg-slate-900 border border-cyan-700 rounded px-3 py-2 text-emerald-300 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 tracking-wider">
+            <button onclick="checkPasscode()" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold px-6 py-2 rounded transition glow-box-cyan">
+              AUTHENTICATE
+            </button>
+          </div>
+          <div class="flex justify-between items-center text-xs text-slate-400 pt-1">
+            <button onclick="toggleHint()" class="hover:text-cyan-300 underline flex items-center space-x-1">
+              <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+              <span>Need a hint?</span>
+            </button>
+            <span id="loginError" class="text-rose-500 font-bold hidden">ACCESS DENIED: INCORRECT PASSCODE</span>
+          </div>
+          <div id="hintBox" class="hidden p-3 rounded bg-cyan-950/40 border border-cyan-800 text-cyan-300 text-xs">
+            <!-- Hint text injected via config -->
+          </div>
+        </div>
+      </div>
+
+      <!-- LEVEL 1: MEMORY DECRYPTOR PUZZLE -->
+      <div id="level1" class="hidden flex-1 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto">
+        <div class="space-y-4">
+          <div class="border-b border-cyan-900/80 pb-3 flex justify-between items-center">
+            <div>
+              <h2 class="text-lg sm:text-xl font-bold text-cyan-300 glow-text-cyan flex items-center gap-2">
+                <i data-lucide="database" class="w-5 h-5 text-cyan-400"></i>
+                LEVEL 1: MEMORY DECRYPTOR
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Decrypt corrupted relational database fragments.</p>
+            </div>
+            <span id="quizProgress" class="text-xs px-2 py-1 rounded bg-slate-900 text-cyan-400 border border-cyan-800">FRAGMENT 1 / 3</span>
+          </div>
+
+          <!-- Question Box -->
+          <div class="bg-slate-900/80 border border-cyan-800/60 p-4 sm:p-5 rounded-lg space-y-3">
+            <div id="questionTitle" class="text-xs text-cyan-500 font-bold tracking-widest uppercase">LOG FRAGMENT #1</div>
+            <p id="questionText" class="text-emerald-300 text-sm sm:text-base font-mono leading-relaxed">
+              Loading question...
+            </p>
+          </div>
+
+          <!-- Answer Box -->
+          <div class="space-y-3">
+            <label class="block text-xs text-slate-400 font-mono">ENTER DECRYPTION KEY / ANSWER:</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input type="text" id="quizAnswerInput" placeholder="Type answer..." class="flex-1 bg-slate-900 border border-cyan-700 rounded px-3 py-2 text-emerald-300 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+              <button onclick="submitQuizAnswer()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2 rounded transition glow-box-green">
+                DECRYPT
+              </button>
+            </div>
+            <div id="quizFeedback" class="text-xs font-mono min-h-[18px]"></div>
+          </div>
+        </div>
+
+        <!-- Terminal Output Area -->
+        <div class="mt-4 p-3 bg-slate-950 border border-slate-800 rounded text-xs text-slate-400 h-24 overflow-y-auto font-mono" id="decryptionLogs">
+          <div>[SYS]: Waiting for decryption key...</div>
+        </div>
+      </div>
+
+      <!-- LEVEL 2: QUANTUM BRIDGE SIGNAL ALIGNMENT -->
+      <div id="level2" class="hidden flex-1 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto">
+        <div class="space-y-4">
+          <div class="border-b border-cyan-900/80 pb-2 flex justify-between items-center">
+            <div>
+              <h2 class="text-lg sm:text-xl font-bold text-cyan-300 glow-text-cyan flex items-center gap-2">
+                <i data-lucide="radio" class="w-5 h-5 text-cyan-400"></i>
+                LEVEL 2: QUANTUM SIGNAL BRIDGE
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Align frequencies to bridge the physical distance gap.</p>
+            </div>
+            <div class="text-xs text-cyan-400 font-mono bg-cyan-950/80 px-2 py-1 border border-cyan-800 rounded">
+              SYNC: <span id="syncPercentage" class="text-yellow-400 font-bold">0%</span>
+            </div>
+          </div>
+
+          <!-- Cities & Radar View -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Node A -->
+            <div class="bg-slate-900/70 border border-cyan-900 p-3 rounded flex items-center justify-between">
+              <div>
+                <span class="text-xs text-slate-400 block">NODE ALPHA</span>
+                <span id="cityA" class="font-bold text-cyan-300 text-sm">Lecce</span>
+              </div>
+              <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></div>
+            </div>
+            <!-- Node B -->
+            <div class="bg-slate-900/70 border border-cyan-900 p-3 rounded flex items-center justify-between">
+              <div>
+                <span class="text-xs text-slate-400 block">NODE BETA</span>
+                <span id="cityB" class="font-bold text-cyan-300 text-sm">Torino</span>
+              </div>
+              <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></div>
+            </div>
+          </div>
+
+          <!-- Frequency Sliders Puzzle -->
+          <div class="bg-slate-900/90 border border-cyan-800/80 p-4 rounded-lg space-y-4">
+            <p class="text-xs text-slate-300 font-mono">
+              Adjust sliders until frequencies match target harmonic quantum resonance.
+            </p>
+
+            <!-- Slider 1 -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs font-mono">
+                <span class="text-cyan-400">FREQ ALPHA (Wavelength)</span>
+                <span id="val1" class="text-emerald-400">0 Hz</span>
+              </div>
+              <input type="range" id="slider1" min="0" max="100" value="20" oninput="updateQuantumSliders()" class="w-full accent-cyan-400 bg-slate-800 h-2 rounded cursor-pointer">
+            </div>
+
+            <!-- Slider 2 -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs font-mono">
+                <span class="text-cyan-400">FREQ BETA (Phase Alignment)</span>
+                <span id="val2" class="text-emerald-400">0 Hz</span>
+              </div>
+              <input type="range" id="slider2" min="0" max="100" value="80" oninput="updateQuantumSliders()" class="w-full accent-cyan-400 bg-slate-800 h-2 rounded cursor-pointer">
+            </div>
+
+            <!-- Slider 3 -->
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs font-mono">
+                <span class="text-cyan-400">FREQ GAMMA (Quantum Entanglement)</span>
+                <span id="val3" class="text-emerald-400">0 Hz</span>
+              </div>
+              <input type="range" id="slider3" min="0" max="100" value="50" oninput="updateQuantumSliders()" class="w-full accent-cyan-400 bg-slate-800 h-2 rounded cursor-pointer">
+            </div>
+          </div>
+        </div>
+
+        <button id="quantumLinkBtn" onclick="tryEstablishQuantumLink()" disabled class="mt-4 w-full py-3 bg-slate-800 text-slate-500 font-bold rounded transition text-sm font-mono tracking-wider">
+          ESTABLISH STABLE LINK
+        </button>
+      </div>
+
+      <!-- LEVEL 3: THE FINAL VAULT / TIME CAPSULE -->
+      <div id="level3" class="hidden flex-1 p-4 sm:p-6 flex flex-col justify-between overflow-y-auto">
+        <div class="space-y-6">
+          
+          <!-- Vault Unlocked Header -->
+          <div class="text-center space-y-2 border-b border-cyan-900/80 pb-4">
+            <div class="inline-block px-3 py-1 bg-emerald-950/80 border border-emerald-500 rounded-full text-emerald-400 text-xs font-bold tracking-widest glow-text-green animate-pulse">
+              ★ FIREWALL BYPASSED - VAULT UNLOCKED ★
+            </div>
+            <h1 id="vaultTitle" class="text-2xl sm:text-3xl font-extrabold text-cyan-300 glow-text-cyan">
+              HAPPY BIRTHDAY, MY LOVE!
+            </h1>
+            <p id="vaultSubtitle" class="text-xs sm:text-sm text-slate-400">
+              Welcome to your personal encrypted birthday archive.
+            </p>
+          </div>
+
+          <!-- Birthday Letter Card -->
+          <div class="bg-slate-900/90 border border-cyan-700/70 rounded-xl p-5 sm:p-6 glow-box-cyan relative space-y-4">
+            <div class="text-xs text-cyan-500 font-mono flex items-center justify-between border-b border-cyan-900/50 pb-2">
+              <span class="flex items-center gap-1.5"><i data-lucide="mail" class="w-4 h-4 text-pink-400"></i> TRANSMISSION_LETTER.TXT</span>
+              <span class="text-pink-400 font-semibold">CONFIDENTIAL</span>
+            </div>
+            
+            <div id="letterContent" class="text-slate-200 text-sm sm:text-base leading-relaxed font-sans whitespace-pre-line space-y-3">
+              <!-- Dynamically populated letter -->
+            </div>
+          </div>
+
+          <!-- Regalo: il gioco scaricabile (compare dopo la lettera) -->
+          <div id="gameGift" class="hidden bg-gradient-to-r from-slate-900 via-emerald-950/40 to-slate-900 border border-emerald-500/60 rounded-xl p-5 sm:p-6 glow-box-cyan space-y-3 text-center">
+            <div class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+              <i data-lucide="gamepad-2" class="w-4 h-4"></i> BONUS LEVEL UNLOCKED
+            </div>
+            <h3 class="text-lg sm:text-xl font-bold text-slate-100">🎮 C'è ancora una sorpresa...</h3>
+            <p class="text-sm text-slate-300 leading-relaxed">Ho fatto un videogioco solo per te: <b>Pixel Knights</b>. Scaricalo, aprilo sul PC e prova a sconfiggere il boss finale!</p>
+            <a id="gameDownloadBtn" href="#" download class="inline-block px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm tracking-wide transition">
+              ⬇ SCARICA PIXEL KNIGHTS (Windows)
+            </a>
+            <p class="text-[11px] text-slate-500 leading-relaxed">Se Windows mostra "Windows ha protetto il PC", clicca <b>Maggiori informazioni</b> e poi <b>Esegui comunque</b>: il file è sicuro, l'ho fatto io. 😄<br>Se è uno .zip, prima estrailo (tasto destro → Estrai tutto).</p>
+          </div>
+
+          <!-- Countdown / Reunion Voucher Card -->
+          <div class="bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 border border-pink-500/40 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="space-y-1 text-center sm:text-left">
+              <span class="text-xs font-mono text-pink-400 font-bold uppercase tracking-wider">NEXT REUNION VOUCHER</span>
+              <h3 id="reunionTitle" class="text-lg font-bold text-slate-100">Our Next Hug Is Loading...</h3>
+              <p id="reunionSubtitle" class="text-xs text-slate-400">Valid for infinite kisses, warm hugs & late night dates.</p>
+            </div>
+            <div class="text-center sm:text-right bg-slate-950/80 px-4 py-2 rounded-lg border border-pink-900">
+              <div class="text-xs text-slate-400">REUNION DATE</div>
+              <div id="reunionDateDisplay" class="text-sm sm:text-base font-bold text-pink-400 font-mono">SOON</div>
+            </div>
+          </div>
+
+          <!-- Interactive Memory Nodes / Media Wall -->
+          <div class="space-y-3">
+            <h3 class="text-xs font-mono text-cyan-400 font-bold tracking-wider uppercase flex items-center gap-2">
+              <i data-lucide="sparkles" class="w-4 h-4 text-cyan-300"></i> DECRYPTED MEMORY ARCHIVES (Click to unveil)
+            </h3>
+            
+            <div id="memoryNodesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Memory Nodes dynamically added -->
+            </div>
+          </div>
+
+        </div>
+
+        <div class="mt-8 text-center text-xs text-slate-500 border-t border-cyan-900/40 pt-4">
+          Coded with ❤️ specifically for you. Forever & Always.
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer / Status Bar -->
+  <footer class="border-t border-cyan-900/40 bg-slate-950/90 text-slate-500 text-xs px-4 py-2 flex flex-col sm:flex-row justify-between items-center z-40 gap-1 font-mono">
+    <div>SYS.STATUS: OPERATIONAL</div>
+    <div class="flex items-center space-x-3">
+      <button onclick="restartGame()" class="hover:text-cyan-400 transition underline">RESTART TERMINAL</button>
+      <span>|</span>
+      <span>ENCRYPTION: AES-256-HEART</span>
+    </div>
+  </footer>
+
+  <!-- CONFIG EDIT MODAL -->
+  <div id="configModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-cyan-600 rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-cyan-800 flex justify-between items-center bg-slate-950">
+        <h3 class="font-bold text-cyan-300 flex items-center gap-2 text-sm sm:text-base">
+          <i data-lucide="settings" class="w-4 h-4"></i> CONFIG EDITOR // CUSTOMIZE YOUR GIFT
+        </h3>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-4 font-mono text-xs sm:text-sm">
+        <p class="text-slate-400 text-xs">
+          Modify your custom data here. Click "Save & Apply" to instantly test your custom story, answers, and birthday letter!
+        </p>
+
+        <!-- General Config -->
+        <div class="space-y-2 border-t border-slate-800 pt-3">
+          <span class="text-cyan-400 font-bold block">1. Passcode & Hint</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-400 text-[10px]">PASSCODE</label>
+              <input type="text" id="cfgPasscode" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-emerald-300">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[10px]">HINT TEXT</label>
+              <input type="text" id="cfgHint" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-emerald-300">
+            </div>
+          </div>
+        </div>
+
+        <!-- Level 1 Questions -->
+        <div class="space-y-2 border-t border-slate-800 pt-3">
+          <span class="text-cyan-400 font-bold block">2. Level 1 Memory Questions</span>
+          <div id="cfgQuestionsContainer" class="space-y-3">
+            <!-- Dynamic Q inputs -->
+          </div>
+        </div>
+
+        <!-- Level 2 Cities -->
+        <div class="space-y-2 border-t border-slate-800 pt-3">
+          <span class="text-cyan-400 font-bold block">3. Level 2 Cities</span>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-400 text-[10px]">LECCE (NODE A)</label>
+              <input type="text" id="cfgCityA" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-emerald-300">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[10px]">TORINO (NODE B)</label>
+              <input type="text" id="cfgCityB" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-emerald-300">
+            </div>
+          </div>
+        </div>
+
+        <!-- Level 3 Birthday Vault -->
+        <div class="space-y-2 border-t border-slate-800 pt-3">
+          <span class="text-cyan-400 font-bold block">4. Final Birthday Letter & Reunion</span>
+          <div>
+            <label class="block text-slate-400 text-[10px]">LETTER TEXT</label>
+            <textarea id="cfgLetter" rows="4" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-emerald-300 font-sans text-xs"></textarea>
+          </div>
+          <div>
+            <label class="block text-slate-400 text-[10px]">NEXT REUNION DATE</label>
+            <input type="text" id="cfgReunionDate" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-emerald-300">
+          </div>
+          <div>
+            <label class="block text-slate-400 text-[10px]">GAME DOWNLOAD LINK</label>
+            <input type="text" id="cfgGameUrl" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-emerald-300">
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-4 border-t border-cyan-800 bg-slate-950 flex justify-end space-x-2">
+        <button onclick="closeConfigModal()" class="px-4 py-1.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs">Cancel</button>
+        <button onclick="saveConfigFromModal()" class="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEMORY DETAIL MODAL -->
+  <div id="memoryModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-cyan-500 rounded-xl max-w-lg w-full p-5 space-y-4 glow-box-cyan">
+      <div class="flex justify-between items-center border-b border-cyan-900 pb-2">
+        <h4 id="memModalTitle" class="font-bold text-cyan-300 text-base">Memory Title</h4>
+        <button onclick="closeMemoryModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="memModalBody" class="text-slate-300 text-sm space-y-3 font-sans leading-relaxed">
+        <!-- Memory Content -->
+      </div>
+      <button onclick="closeMemoryModal()" class="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold rounded text-xs font-mono">
+        CLOSE ARCHIVE
+      </button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT GAME LOGIC -->
+  <script>
+    // --- DEFAULT CONFIGURATION DATA ---
+    const defaultConfig = {
+      passcode: "palestra", 
+      hintText: "INDIZIO: il luogo in cui i nostri sguardi si sono incrociati per la prima volta.",
+      cityA: "Lecce, IT",
+      cityB: "Torino, IT",
+      reunionDate: "December 20, 2026",
+      // LINK DEL GIOCO (zip/exe): sostituiscilo con il tuo link di download.
+      gameUrl: "https://github.com/desireebramato-09/PixelKnights/releases/download/v1/PixelKnights.zip",
+      questions: [
+        {
+          q: "Security Lock #1: Quando ci siamo dati il primo bacio?",
+          a: "0108",
+          hint: "Era il primo del mese. Scrivi la data con questo formato: DDMM (es.0108)"
+        },
+        {
+          q: "Security Lock #2: Qual è il nomignolo secolare che uso con te?",
+          a: "cretino",
+          hint: "ce lo diciamo da sempre..."
+        },
+        {
+          q: "Security Lock #3: Vediamo se mi conosci bene..qual è il mio cantante preferito?",
+          a: "nayt",
+          hint: "pure l'indizio vuoi? muoviti e indovinalo cretino!!"
+        }
+      ],
+      birthdayLetter: `Tanti auguri di buon compleanno, cretino! ❤️
+
+      Anche se oggi ci separano molti chilometri, questa piccola app è la prova "tangibile" che il mio cuore è sempre lì, connesso al tuo, a ogni battito. Mi ispiri ogni singolo giorno con la tua gentilezza, la tua intelligenza (o stupidità,dipende dai punti di vista) e il tuo umorismo unico, che riesce sempre a illuminare anche le mie giornate più grigie.
+
+      Grazie per ogni videochiamata a tarda notte, quando il mondo dormiva e noi eravamo ancora lì a parlarci, per ogni messaggio dolce che mi ha fatto sorridere inaspettatamente, e per ogni momento, grande o piccolo, che condividiamo attraverso lo schermo. Ho creato questo piccolo giochino proprio per strapparti un sorriso, anche solo per un istante, nel tuo giorno speciale..lo sai che amo farti regali,e quando la distanza non ce lo permette,faccio del mio meglio per torvare alternative uniche e speciali,proprio come te.
+
+      Non vedo l’ora che il giorno in cui non avremo più bisogno di ponti virtuali o di schermi per vederci arrivi. Fino ad allora, conta i giorni con me, perché ogni secondo che passa ci avvicina a quel momento in cui potrò finalmente stringerti tra le braccia, senza distanze, senza ritardi (cioè oddio,dipende da te...), solo noi due.
+
+      Ti amo, e ti auguro un anno pieno di gioia tesoro mio, successi e, soprattutto, di noi.`,
+      memories: [
+        {
+          title: "🎞️ Pellicole e Pop-Corn",
+          summary: "La nostra prima serata al cinema.",
+          details: "ti ricordi quando siamo andati a vedere il nuovo film di spiderman? la me bambina si innamorava del film..ma la me adulta si innamorava ad ogni nostro sguardo"
+        },
+        {
+          title: "🎵 La nostra canzona",
+          summary: "La canzone che mi accompagna ogni sera quando la mancanza si fa sentire: Ehy there Delilah",
+          details: "Ogni volta che ascolto questa canzone, mi immagino che tu sia qui con me, a tenermi la mano, e a sorridermi con i tuoi bei occhietti."
+        },
+        {
+          title: "💌 Pinky Promise",
+          summary: "una piccola promessa con il mignolino per il prossimo anno",
+          details: "Promettimi con il mignolino, che l'anno prossimo festeggeremo il tuo compleanno dal vivo, con una bella torta e senza schermi di mezzo!"
+        }
+      ]
+    };
+
+    // Active Config State
+    let config = JSON.parse(localStorage.getItem('terminal_gift_config')) || defaultConfig;
+
+    // Game Progress State
+    let currentLevel = 0;
+    let currentQuizIndex = 0;
+    let audioEnabled = true;
+
+    // Quantum Sliders Target Values
+    const targetSlider1 = 45;
+    const targetSlider2 = 70;
+    const targetSlider3 = 30;
+
+    // --- WEB AUDIO API (Retro SFX) ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new AudioContext();
+      }
+    }
+
+    function playBeep(freq = 440, type = 'sine', duration = 0.08) {
+      if (!audioEnabled) return;
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playSuccessSFX() {
+      if (!audioEnabled) return;
+      playBeep(523.25, 'triangle', 0.1); // C5
+      setTimeout(() => playBeep(659.25, 'triangle', 0.1), 100); // E5
+      setTimeout(() => playBeep(783.99, 'triangle', 0.2), 200); // G5
+    }
+
+    function playErrorSFX() {
+      if (!audioEnabled) return;
+      playBeep(150, 'sawtooth', 0.2);
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      document.getElementById('soundText').innerText = audioEnabled ? "AUDIO: ON" : "AUDIO: OFF";
+      document.getElementById('soundIcon').setAttribute('data-lucide', audioEnabled ? "volume-2" : "volume-x");
+      lucide.createIcons();
+    }
+
+    // --- BOOT SEQUENCE LOGS (Level 0) ---
+    const bootSequenceMessages = [
+      "[SYS_BOOT]: Initializing Quantum Core Kernel v2.6...",
+      "[NETWORK]: Connecting to Remote Node...",
+      "[SECURITY]: Encrypted Payload Detected.",
+      "[INFO]: Searching for authorized recipient...",
+      "[STATUS]: Ready for user input."
+    ];
+
+    function runBootSequence() {
+      const container = document.getElementById('bootLogs');
+      container.innerHTML = "";
+      let delay = 0;
+
+      bootSequenceMessages.forEach((msg, idx) => {
+        setTimeout(() => {
+          const p = document.createElement('div');
+          p.className = "flex items-center space-x-2";
+          p.innerHTML = `<span class="text-cyan-500">&gt;</span> <span>${msg}</span>`;
+          container.appendChild(p);
+          playBeep(300 + idx * 50, 'sine', 0.04);
+
+          if (idx === bootSequenceMessages.length - 1) {
+            setTimeout(() => {
+              document.getElementById('loginPrompt').classList.remove('hidden');
+              document.getElementById('hintBox').innerText = config.hintText;
+            }, 400);
+          }
+        }, delay);
+        delay += 400;
+      });
+    }
+
+    // Passcode Checking
+    function checkPasscode() {
+      const input = document.getElementById('passcodeInput').value.trim();
+      const err = document.getElementById('loginError');
+
+      if (input.toLowerCase() === config.passcode.toLowerCase()) {
+        playSuccessSFX();
+        err.classList.add('hidden');
+        switchLevel(1);
+      } else {
+        playErrorSFX();
+        err.classList.remove('hidden');
+      }
+    }
+
+    function toggleHint() {
+      const hint = document.getElementById('hintBox');
+      hint.classList.toggle('hidden');
+      playBeep(600, 'sine', 0.05);
+    }
+
+    // --- LEVEL 1: QUIZ LOGIC ---
+    function loadQuizQuestion() {
+      if (currentQuizIndex >= config.questions.length) {
+        // Quiz completed
+        playSuccessSFX();
+        switchLevel(2);
+        return;
+      }
+
+      const qData = config.questions[currentQuizIndex];
+      document.getElementById('quizProgress').innerText = `FRAGMENT ${currentQuizIndex + 1} / ${config.questions.length}`;
+      document.getElementById('questionTitle').innerText = `LOG FRAGMENT #${currentQuizIndex + 1}`;
+      document.getElementById('questionText').innerText = qData.q;
+      document.getElementById('quizAnswerInput').value = "";
+      document.getElementById('quizFeedback').innerText = "";
+    }
+
+    function submitQuizAnswer() {
+      const input = document.getElementById('quizAnswerInput').value.trim().toLowerCase();
+      const qData = config.questions[currentQuizIndex];
+      const feedback = document.getElementById('quizFeedback');
+      const logArea = document.getElementById('decryptionLogs');
+
+      if (input.includes(qData.a.toLowerCase())) {
+        playSuccessSFX();
+        feedback.className = "text-xs font-mono text-emerald-400 font-bold";
+        feedback.innerText = "✓ FRAGMENT DECRYPTED SUCCESSFULLY!";
+
+        const log = document.createElement('div');
+        log.className = "text-emerald-400";
+        log.innerText = `[SUCCESS]: Fragment #${currentQuizIndex + 1} verified & decrypted.`;
+        logArea.appendChild(log);
+        logArea.scrollTop = logArea.scrollHeight;
+
+        currentQuizIndex++;
+        setTimeout(loadQuizQuestion, 1200);
+      } else {
+        playErrorSFX();
+        feedback.className = "text-xs font-mono text-rose-400 font-bold";
+        feedback.innerText = `✗ DECRYPTION FAILED. ${ qData.hint || 'Try again!'}`;
+
+        const log = document.createElement('div');
+        log.className = "text-rose-400";
+        log.innerText = `[ERROR]: Key mismatch for Fragment #${currentQuizIndex + 1}.`;
+        logArea.appendChild(log);
+        logArea.scrollTop = logArea.scrollHeight;
+      }
+    }
+
+    // --- LEVEL 2: QUANTUM SLIDERS LOGIC ---
+    function updateQuantumSliders() {
+      const s1 = parseInt(document.getElementById('slider1').value);
+      const s2 = parseInt(document.getElementById('slider2').value);
+      const s3 = parseInt(document.getElementById('slider3').value);
+
+      document.getElementById('val1').innerText = `${s1} Hz`;
+      document.getElementById('val2').innerText = `${s2} Hz`;
+      document.getElementById('val3').innerText = `${s3} Hz`;
+
+      // Calculate accuracy
+      const diff1 = Math.abs(s1 - targetSlider1);
+      const diff2 = Math.abs(s2 - targetSlider2);
+      const diff3 = Math.abs(s3 - targetSlider3);
+
+      const totalDiff = diff1 + diff2 + diff3; // 0 is perfect match
+      const maxDiff = 300;
+      let accuracy = Math.max(0, Math.round(100 - (totalDiff / maxDiff) * 100));
+
+      document.getElementById('syncPercentage').innerText = `${accuracy}%`;
+
+      const linkBtn = document.getElementById('quantumLinkBtn');
+      if (accuracy >= 95) {
+        linkBtn.disabled = false;
+        linkBtn.className = "mt-4 w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded transition text-sm font-mono tracking-wider glow-box-green cursor-pointer animate-bounce";
+      } else {
+        linkBtn.disabled = true;
+        linkBtn.className = "mt-4 w-full py-3 bg-slate-800 text-slate-500 font-bold rounded transition text-sm font-mono tracking-wider cursor-not-allowed";
+      }
+
+      playBeep(200 + accuracy * 5, 'sine', 0.02);
+    }
+
+    function tryEstablishQuantumLink() {
+      playSuccessSFX();
+      switchLevel(3);
+    }
+
+    // --- LEVEL 3: FINAL VAULT POPULATION ---
+    function populateFinalVault() {
+      document.getElementById('letterContent').innerText = config.birthdayLetter;
+      document.getElementById('reunionDateDisplay').innerText = config.reunionDate;
+      document.getElementById('cityA').innerText = config.cityA;
+      document.getElementById('cityB').innerText = config.cityB;
+
+      // Regalo: il download del gioco compare qualche secondo dopo che la lettera e' apparsa
+      const gift = document.getElementById('gameGift');
+      const gameUrl = config.gameUrl || defaultConfig.gameUrl;
+      if (gift && gameUrl && !gameUrl.includes('CAMBIA-CON')) {
+        document.getElementById('gameDownloadBtn').href = gameUrl;
+        if (gift.classList.contains('hidden')) {
+          setTimeout(() => {
+            if (currentLevel !== 3) return;
+            gift.classList.remove('hidden');
+            gift.classList.add('gift-reveal');
+            playSuccessSFX();
+          }, 3000);
+        }
+      }
+
+      // Render Memories
+      const grid = document.getElementById('memoryNodesGrid');
+      grid.innerHTML = "";
+
+      config.memories.forEach((mem, idx) => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-900 border border-cyan-800/80 p-3.5 rounded-lg hover:border-cyan-400 transition cursor-pointer flex flex-col justify-between space-y-2 group";
+        card.onclick = () => openMemoryModal(mem);
+        card.innerHTML = `
+          <div>
+            <span class="text-[10px] text-cyan-500 font-mono">NODE_ARCHIVE_0${idx+1}</span>
+            <h4 class="font-bold text-sm text-cyan-200 group-hover:text-cyan-300">${mem.title}</h4>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-2">${mem.summary}</p>
+          </div>
+          <div class="text-[11px] text-emerald-400 flex items-center space-x-1 pt-1 font-mono">
+            <span>UNLOCK DATA</span> &rarr;
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // --- LEVEL SWITCHER ---
+    function switchLevel(lvl) {
+      currentLevel = lvl;
+      document.getElementById('level0').classList.add('hidden');
+      document.getElementById('level1').classList.add('hidden');
+      document.getElementById('level2').classList.add('hidden');
+      document.getElementById('level3').classList.add('hidden');
+      const giftBox = document.getElementById('gameGift');
+      if (giftBox) { giftBox.classList.add('hidden'); giftBox.classList.remove('gift-reveal'); }
+
+      const status = document.getElementById('levelStatusText');
+
+      if (lvl === 1) {
+        document.getElementById('level1').classList.remove('hidden');
+        status.innerText = "LEVEL 1 // DECRYPTING MEMORIES";
+        status.className = "text-cyan-400 font-bold tracking-wider";
+        loadQuizQuestion();
+      } else if (lvl === 2) {
+        document.getElementById('level2').classList.remove('hidden');
+        status.innerText = "LEVEL 2 // QUANTUM LINK RESONANCE";
+        status.className = "text-yellow-400 font-bold tracking-wider";
+        updateQuantumSliders();
+      } else if (lvl === 3) {
+        document.getElementById('level3').classList.remove('hidden');
+        status.innerText = "LEVEL 3 // SECURE BIRTHDAY VAULT UNLOCKED";
+        status.className = "text-emerald-400 font-bold tracking-wider glow-text-green";
+        populateFinalVault();
+      }
+    }
+
+    function restartGame() {
+      currentQuizIndex = 0;
+      switchLevel(0);
+      runBootSequence();
+    }
+
+    // --- MEMORY MODAL ---
+    function openMemoryModal(mem) {
+      playBeep(600, 'sine', 0.05);
+      document.getElementById('memModalTitle').innerText = mem.title;
+      document.getElementById('memModalBody').innerHTML = `
+        <p class="font-semibold text-cyan-300 text-xs uppercase tracking-wider">${mem.summary}</p>
+        <p class="text-slate-200">${mem.details}</p>
+      `;
+      document.getElementById('memoryModal').classList.remove('hidden');
+    }
+
+    function closeMemoryModal() {
+      document.getElementById('memoryModal').classList.add('hidden');
+    }
+
+    // --- CONFIG MODAL & EDIT MODE ---
+    function openConfigModal() {
+      playBeep(500, 'sine', 0.05);
+      document.getElementById('cfgPasscode').value = config.passcode;
+      document.getElementById('cfgHint').value = config.hintText;
+      document.getElementById('cfgCityA').value = config.cityA;
+      document.getElementById('cfgCityB').value = config.cityB;
+      document.getElementById('cfgReunionDate').value = config.reunionDate;
+      document.getElementById('cfgLetter').value = config.birthdayLetter;
+      document.getElementById('cfgGameUrl').value = config.gameUrl || defaultConfig.gameUrl;
+
+      // Render Question Configs
+      const qContainer = document.getElementById('cfgQuestionsContainer');
+      qContainer.innerHTML = "";
+      config.questions.forEach((q, idx) => {
+        const div = document.createElement('div');
+        div.className = "p-2 bg-slate-950 border border-slate-800 rounded space-y-1.5";
+        div.innerHTML = `
+          <span class="text-[10px] text-cyan-500 font-bold">QUESTION ${idx + 1}</span>
+          <input type="text" id="cfgQ_${idx}" value="${q.q}" placeholder="Question text" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-slate-200">
+          <div class="grid grid-cols-2 gap-1.5">
+            <input type="text" id="cfgA_${idx}" value="${q.a}" placeholder="Answer key" class="bg-slate-900 border border-slate-700 rounded p-1 text-emerald-300">
+            <input type="text" id="cfgH_${idx}" value="${q.hint || ''}" placeholder="Hint" class="bg-slate-900 border border-slate-700 rounded p-1 text-slate-400">
+          </div>
+        `;
+        qContainer.appendChild(div);
+      });
+
+      document.getElementById('configModal').classList.remove('hidden');
+    }
+
+    function closeConfigModal() {
+      document.getElementById('configModal').classList.add('hidden');
+    }
+
+    function saveConfigFromModal() {
+      config.passcode = document.getElementById('cfgPasscode').value.trim();
+      config.hintText = document.getElementById('cfgHint').value.trim();
+      config.cityA = document.getElementById('cfgCityA').value.trim();
+      config.cityB = document.getElementById('cfgCityB').value.trim();
+      config.reunionDate = document.getElementById('cfgReunionDate').value.trim();
+      config.birthdayLetter = document.getElementById('cfgLetter').value.trim();
+      config.gameUrl = document.getElementById('cfgGameUrl').value.trim();
+
+      // Read Questions
+      config.questions.forEach((_, idx) => {
+        const qVal = document.getElementById(`cfgQ_${idx}`).value;
+        const aVal = document.getElementById(`cfgA_${idx}`).value;
+        const hVal = document.getElementById(`cfgH_${idx}`).value;
+        config.questions[idx] = { q: qVal, a: aVal, hint: hVal };
+      });
+
+      // Save to localStorage
+      localStorage.setItem('terminal_gift_config', JSON.stringify(config));
+      playSuccessSFX();
+      closeConfigModal();
+
+      // Reload current screen components
+      if (currentLevel === 3) populateFinalVault();
+    }
+
+    // Keyboard Shortcuts (Enter key in inputs)
+    document.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        if (currentLevel === 0 && !document.getElementById('loginPrompt').classList.contains('hidden')) {
+          checkPasscode();
+        } else if (currentLevel === 1) {
+          submitQuizAnswer();
+        }
+      }
+    });
+
+    // --- INITIALIZATION ---
+    window.onload = function() {
+      lucide.createIcons();
+      runBootSequence();
+    };
+  </script>
+</body>
+</html>
